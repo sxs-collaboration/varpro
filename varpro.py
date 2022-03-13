@@ -81,43 +81,43 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
 #                This vector contains the estimate of the standard 
 #                deviation for each parameter.
 #                The k-th element is the square root of the k-th main 
-#                diagonal element of the covariance matrix CovMx
+#                diagonal element of the covariance matrix CovMatrix
 #
 #---------------------------------------------------------------
 # Specification of the function ada, which computes information
 # related to Phi:
 #
-#   function [Phi,dPhi,Ind] = ada(alpha)
+#   Phi,dPhi,Ind = ada(alpha)
 #
 #     This function computes Phi and dPhi.
 #
 #     On Input: 
 #
-#        alpha length q  contains the current value of the alpha parameters.
+#     alpha    length q  contains the current value of the alpha parameters.
 #
-#        Note:  If more input arguments are needed, call with a lambda.
-#               For example, if the input arguments to ada are alpha and t,
-#               then before calling varpro, initialize t and call varpro with
-#               "lambda alpha = None: ada(alpha,t)"
+#     Note:  If more input arguments are needed, call with a lambda.
+#            For example, if the input arguments to ada are alpha and t,
+#            then before calling varpro, initialize t and call varpro with
+#            "lambda alpha = None: ada(alpha,t)"
 #
 #     On Output:
 #
-#        Phi   m x n1   where Phi(i,j) = phi_j(alpha,t_i).
+#     Phi      m x n1   where Phi(i,j) = phi_j(alpha,t_i).
 #                       (n1 = n if there is no extra term; 
 #                        n1 = n+1 if an extra term is used for a nonlinear
 #                        term with no linear coefficient)
-#        dPhi  m x p    where the columns contain partial derivative
+#     dPhi     m x p    where the columns contain partial derivative
 #                       information for Phi and p is the number of 
 #                       columns in Ind 
 #                       Use numerical differentiation if analytical derivatives
 #                       not available
-#        Ind   2 x p    Column k of dPhi contains the partial
+#     Ind      2 x p    Column k of dPhi contains the partial
 #                       derivative of Phi_j with respect to alpha_i, 
 #                       evaluated at the current value of alpha, 
 #                       where j = Ind(0,k) and i = Ind(1,k).
 #                       Columns of dPhi that are always zero, independent
 #                       of alpha, need not be stored. 
-#        Example:  if  phi_0 is a function of alpha_1 and alpha_2, 
+#     Example:     If  phi_0 is a function of alpha_1 and alpha_2, 
 #                  and phi_1 is a function of alpha_0 and alpha_1, then 
 #                  we can set
 #                          Ind = [ 0 0 1 1
@@ -218,11 +218,11 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
         yuse = y
         if (n < n1):
             yuse = y - Phi[:,n1]
-        temp = np.ndarray.flatten(np.transpose(U[:,np.arange(myrank)])\
+        temp = np.ndarray.flatten(np.transpose(U[:,np.arange(myrank)])
             .dot(W.dot(yuse)))
         c = (temp/s).dot(V[:,np.arange(myrank)])
         y_est = Phi[:,np.arange(n)].dot(c)
-        wresid = W * (np.ndarray.flatten(yuse) - y_est)  #yuse is array, not vec
+        wresid = W * (yuse - y_est)
         if (n < n1):
             y_est = y_est + Phi[:,n1]
         
@@ -243,9 +243,9 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
             Jac1[:,j] = WdPhi[:,range].dot(ctemp[indrows])
             T2[indrows,j] = WdPhi_r[range]
 
-        Jac1 = U[:,np.arange(myrank,m)]\
-            .dot(np.transpose(U[:,np.arange(myrank,m)]).dot(Jac1))
-        T2 = np.diag(1 / s[np.arange(myrank)]).dot(V[:,np.arange(myrank)]\
+        Jac1 = U[:,np.arange(myrank,m)].dot(
+            np.transpose(U[:,np.arange(myrank,m)]).dot(Jac1))
+        T2 = np.diag(1 / s[np.arange(myrank)]).dot(V[:,np.arange(myrank)]
             .dot(T2[np.arange(n),:]))
         Jac2 = U[:,np.arange(myrank)].dot(T2)
         Jacobian = - (Jac1 + Jac2)
@@ -254,7 +254,7 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
 
     def f_lsq(alpha_trial = None):
         Phi_trial,dPhi_trial,Ind = ada(alpha_trial)
-        Jacobian,c,wr_trial,y_est,myrank = formJacobian(alpha_trial,\
+        Jacobian,c,wr_trial,y_est,myrank = formJacobian(alpha_trial,
             Phi_trial,dPhi_trial)
         return wr_trial,Jacobian,Phi_trial,dPhi_trial,y_est,myrank
     # end of f_lsq
@@ -285,7 +285,7 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
            self.j=Jacobian
 
     fj = Func_jacobian(alpha)
-    result = least_squares(lambda z:fj.fun(z),alpha,lambda z: fj.jac(z),\
+    result = least_squares(lambda z:fj.fun(z),alpha,lambda z: fj.jac(z),
         bounds,method='dogbox')
     Phi,dPhi,Ind = ada(result.x)
     Jacobian,c,wresid,y_est,myrank=formJacobian(result.x,Phi,dPhi)
