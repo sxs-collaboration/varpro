@@ -212,15 +212,15 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
         if (myrank < n):
             print('Warning from VARPRO:')
             print('   The linear parameters are currently not well-determined.')
-            print('   The rank of the matrix in the subproblem is %d',myrank)
-            print('   which is less than the n=%d linear parameters.',n)
+            print('   The rank of the matrix in the subproblem is ',myrank)
+            print('   which is less than the no. of linear parameters,',n)
         
         yuse = y
         if (n < n1):
             yuse = y - Phi[:,n1]
         temp = np.ndarray.flatten(np.transpose(U[:,np.arange(myrank)])
             .dot(W.dot(yuse)))
-        c = (temp/s).dot(V[:,np.arange(myrank)])
+        c = (temp / s).dot(V[np.arange(myrank)])
         y_est = Phi[:,np.arange(n)].dot(c)
         wresid = W * (yuse - y_est)
         if (n < n1):
@@ -245,7 +245,7 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
 
         Jac1 = U[:,np.arange(myrank,m)].dot(
             np.transpose(U[:,np.arange(myrank,m)]).dot(Jac1))
-        T2 = np.diag(1 / s[np.arange(myrank)]).dot(V[:,np.arange(myrank)]
+        T2 = np.diag(1 / s[np.arange(myrank)]).dot(V[np.arange(myrank)]
             .dot(T2[np.arange(n),:]))
         Jac2 = U[:,np.arange(myrank)].dot(T2)
         Jacobian = - (Jac1 + Jac2)
