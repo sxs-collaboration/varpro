@@ -329,4 +329,4 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
     print('VARPRO is finished.')
     print('-------------------\n')
 
-    return result.x,c,wresid,wresid_norm,y_est   # end of varpro
+    return result.x,c,wresid,wresid_norm,y_est,CorMx,std_dev_params   # end of varpro
