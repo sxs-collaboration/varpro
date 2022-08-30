@@ -75,7 +75,7 @@ alphainit = np.array([0.5,2,3])
 #Example call for bound alpha[0] >= 0.4
 #bounds=([0.4,-np.inf,-np.inf],np.inf)
 #alpha,c,wresid,resid_norm,y_est= varpro(t,y,w,alphainit,2,lambda alpha = None: examplePhiFunction(alpha,t),bounds)
-alpha,c,wresid,resid_norm,y_est = varpro(t,y,w,alphainit,2,lambda alpha: examplePhiFunction(alpha,t))
+alpha,c,wresid,resid_norm,y_est,CorMx,std_dev_params = varpro(t,y,w,alphainit,2,lambda alpha: examplePhiFunction(alpha,t))
 
 # The data y(t) were generated using the parameters
 #         alphatrue = [1.0; 2.5; 4.0], ctrue = [6; 1].
