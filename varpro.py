@@ -3,8 +3,8 @@ from scipy.sparse import spdiags
 from scipy.optimize import least_squares
 from scipy import linalg
 
-def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
-      bounds = None): 
+def varpro(t, y, w, alpha, n, ada,
+      bounds = None, **kwargs):
 #Solve a separable nonlinear least squares problem.
 # This is a slightly simplified Python translation of the Matlab code by
 # Dianne P. O'Leary and Bert W. Rust. The original code is documented in
@@ -44,6 +44,10 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
 #   bounds       If supplied, must be a tuple of both lower and upper
 #   (Optional)   bounds for all q  of the parameters alpha. See documentation
 #                of scipy.optimize.least_squares for examples.
+#   **kwargs     Any keyword argument taken by scipy.optimize.least_squares
+#   (Optional)   other than bounds can be passed here. See
+#                scipy.optimize.least_squares documentation for possible
+#                arguments.
 #
 # On Output:
 #
@@ -188,7 +192,7 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
     if np.logical_and((n2 > 0),(n2 != n3)):
         raise Exception('In user function ada: dPhi and Ind must have the same number of columns.')
     
-    def formJacobian(alpha = None,Phi = None,dPhi = None): 
+    def formJacobian(alpha, Phi, dPhi):
         U,S,V = np.linalg.svd(W * Phi)
         if (n >= 1):
             s = S                #S is a vector in Python, not a matrix
@@ -252,7 +256,7 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
         
         return Jacobian,c,wresid,y_est,myrank  # end of formJacobian
 
-    def f_lsq(alpha_trial = None):
+    def f_lsq(alpha_trial):
         Phi_trial,dPhi_trial,Ind = ada(alpha_trial)
         Jacobian,c,wr_trial,y_est,myrank = formJacobian(alpha_trial,
             Phi_trial,dPhi_trial)
@@ -286,7 +290,7 @@ def varpro(t = None,y = None,w = None,alpha = None,n = None,ada = None,
 
     fj = Func_jacobian(alpha)
     result = least_squares(lambda z:fj.fun(z),alpha,lambda z: fj.jac(z),
-        bounds,method='dogbox')
+        bounds, **kwargs)
     Phi,dPhi,Ind = ada(result.x)
     Jacobian,c,wresid,y_est,myrank=formJacobian(result.x,Phi,dPhi)
     print("residual_norm",result.cost)
