@@ -149,9 +149,10 @@ def varpro(t, y, w, alpha, n, ada,
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     m = len(y)
     m1 = len(w)
+    m2 = len(t)
 
-    if (m1 != m):
-        raise Exception('y and w must be vectors of the same length')
+    if (m1 != m or m2 != m or m2 != m1):
+        raise Exception('t, y, and w must be vectors of the same length')
     
     if (len(alpha.shape) > 1):
         raise Exception('alpha must be a 1d vector containing initial guesses for nonlinear parameters')
