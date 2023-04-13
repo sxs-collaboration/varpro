@@ -147,6 +147,37 @@ def varpro(t, y, w, alpha, n, ada,
 #  alpha, not c, and treated non-linearly. (This should rarely be needed.)
 #  
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    class RankError(Exception):
+        '''Raised when linear parameters are ill-determined.'''
+
+        def __init__(self, rank, num_c, linear_params, nonlin_params):
+            message = """
+The linear parameters are not well-determined.
+The rank of the matrix in the subproblem is %d,
+which is less than the number of linear parameters (%d).
+
+Linear parameters:
+    %s
+Nonlinear parameters:
+    %s""" \
+                        % (rank, num_c, " ".join(map(str, linear_params)), " ".join(map(str, nonlin_params)))
+            super().__init__(message)
+
+    class MaxIterationError(Exception):
+        '''Raised when maximum number of iterations is reached
+           during nonlinear solve.'''
+
+        def __init__(self, linear_params, nonlin_params):
+            message = """
+Max iterations reached without convergence.
+
+Linear parameters:
+    %s
+Nonlinear parameters:
+    %s""" \
+                        % (" ".join(map(str, linear_params)), " ".join(map(str, nonlin_params)))
+            super().__init__(message)
+
     m = len(y)
     m1 = len(w)
     m2 = len(t)
@@ -294,6 +325,10 @@ def varpro(t, y, w, alpha, n, ada,
         bounds, **kwargs)
     Phi,dPhi,Ind = ada(result.x)
     Jacobian,c,wresid,y_est,myrank=formJacobian(result.x,Phi,dPhi)
+    if result.status == 0: #maximum number of nonlinear fit iterations was exceeded
+        raise MaxIterationError(c, result.x)
+    if myrank < n: #linear parameters are ill-determined
+        raise RankError(myrank, n, c, result.x)
     print("residual_norm",result.cost)
     print("gradient norm",result.optimality)
     print("nfev = ",result.nfev)
