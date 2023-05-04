@@ -3,7 +3,7 @@ from scipy.sparse import spdiags
 from scipy.optimize import least_squares
 from scipy import linalg
 
-def varpro(t, y, w, alpha, n, ada,
+def varpro(t, y, yi, w, alpha, n, ada,
       bounds = None, **kwargs):
 #Solve a separable nonlinear least squares problem.
 # This is a slightly simplified Python translation of the Matlab code by
@@ -192,7 +192,7 @@ def varpro(t, y, w, alpha, n, ada,
     if np.logical_and((n2 > 0),(n2 != n3)):
         raise Exception('In user function ada: dPhi and Ind must have the same number of columns.')
     
-    def formJacobian(alpha, Phi, dPhi):
+    def formJacobian(this_y, alpha, Phi, dPhi):
         U,S,V = np.linalg.svd(W * Phi)
         if (n >= 1):
             s = S                #S is a vector in Python, not a matrix
@@ -204,7 +204,7 @@ def varpro(t, y, w, alpha, n, ada,
                 Jacobian[:,Ind[2,:]] = - W * dPhi
             c = []
             y_est = Phi
-            wresid = W * (y - y_est)
+            wresid = W * (this_y - y_est)
             myrank = 1
             return Jacobian,c,wresid,y_est,myrank
     
@@ -219,9 +219,9 @@ def varpro(t, y, w, alpha, n, ada,
             print('   The rank of the matrix in the subproblem is ',myrank)
             print('   which is less than the no. of linear parameters,',n)
         
-        yuse = y
+        yuse = this_y
         if (n < n1):
-            yuse = y - Phi[:,n1]
+            yuse = this_y - Phi[:,n1]
         temp = np.ndarray.flatten(np.transpose(U[:,np.arange(myrank)])
             .dot(W.dot(yuse)))
         c = (temp / s).dot(V[np.arange(myrank)])
@@ -258,9 +258,18 @@ def varpro(t, y, w, alpha, n, ada,
 
     def f_lsq(alpha_trial):
         Phi_trial,dPhi_trial,Ind = ada(alpha_trial)
-        Jacobian,c,wr_trial,y_est,myrank = formJacobian(alpha_trial,
+
+        ## handle re part
+        Jacobian_r,c_r,wr_trial_r,y_est_r,myrank_r = formJacobian(y, alpha_trial,
             Phi_trial,dPhi_trial)
-        return wr_trial,Jacobian,Phi_trial,dPhi_trial,y_est,myrank
+        ## handle im part
+        Jacobian_i,c_i,wr_trial_i,y_est_i,myrank_i = formJacobian(yi, alpha_trial,
+            Phi_trial,dPhi_trial)
+
+        Jacobian = np.concatenate((Jacobian_r, Jacobian_i), axis=0)
+        wr_trial = np.concatenate((wr_trial_r, wr_trial_i))
+
+        return wr_trial,Jacobian,Phi_trial,dPhi_trial,y_est_r,myrank_r
     # end of f_lsq
 
     class Func_jacobian:
@@ -292,7 +301,15 @@ def varpro(t, y, w, alpha, n, ada,
     result = least_squares(lambda z:fj.fun(z),alpha,lambda z: fj.jac(z),
         bounds, **kwargs)
     Phi,dPhi,Ind = ada(result.x)
-    Jacobian,c,wresid,y_est,myrank=formJacobian(result.x,Phi,dPhi)
+
+    ## call formJacobian twice to get re/im parts of y_est.
+    Jacobian,c,wresid,y_est_i,myrank=formJacobian(yi, result.x,Phi,dPhi)
+    Jacobian,c,wresid,y_est_r,myrank=formJacobian(y, result.x,Phi,dPhi)
+    y_est = y_est_r + 1.j*y_est_i
+
+    ## get full resid and jacobian
+    wresid,Jacobian,Phi_trial,dPhi_trial,bla,bla = f_lsq(result.x)
+
     print("residual_norm",result.cost)
     print("gradient norm",result.optimality)
     print("nfev = ",result.nfev)
