@@ -5,11 +5,16 @@ from scipy.optimize import curve_fit
 
 from varpro import *
 
-# Fit QNM ringdown-like data with varpro. The QNM ringdown-like data is produced randomly and contains
-# N_fixed QNM frequencies and N_free QNM frequncies, which are set by sys.argv[1] and sys.argv[2].
-# Initial guesses for these parameters are randomly taken to be 40% within the true parameter values.
-# If varpro fails to match the linear or nonlinear parameters to a relative tolerance of 1e-5 and an
-# absolute tolerance of 1e-8, then we run scipy's least_squares implementation to see if it can do better (as a test).
+# Fit QNM ringdown-like data with varpro.
+# The QNM ringdown-like data is produced randomly and contains
+# N_fixed QNM frequencies and N_free QNM frequncies, which are set
+# by sys.argv[1] and sys.argv[2].
+# Initial guesses for these parameters are randomly taken to be 40%
+# within the true parameter values.
+# If varpro fails to match the linear or nonlinear parameters to a
+# relative tolerance of 1e-5 and an
+# absolute tolerance of 1e-8, then we run scipy's least_squares
+# implementation to see if it can do better (as a test).
 
 
 def build_ringdown_model(t, As_and_omegas, fixed_QNMs, t_ref=0):
@@ -34,7 +39,9 @@ class fitClass:
         self.t_ref = 0
 
     def fit_function(self, t, As_and_omegas):
-        return build_ringdown_model(t, As_and_omegas, self.fixed_QNMs, self.t_ref) 
+        return build_ringdown_model(
+            t, As_and_omegas, self.fixed_QNMs, self.t_ref
+        )
 
 
 def fit_ringdown_waveform(t, fixed_QNMs, free_QNMs, t_ref=0):
@@ -42,33 +49,46 @@ def fit_ringdown_waveform(t, fixed_QNMs, free_QNMs, t_ref=0):
     N_free = len(free_QNMs) // 2
     N = N_fixed + N_free
 
-    omegas = [fixed_QNMs[2 * i] + 1j * fixed_QNMs[2 * i + 1] for i in range(N_fixed)]
-    omegas += [free_QNMs[2 * i] + 1j * free_QNMs[2 * i + 1] for i in range(N_free)]
-    
+    omegas = [
+        fixed_QNMs[2 * i] + 1j * fixed_QNMs[2 * i + 1] for i in range(N_fixed)
+    ]
+    omegas += [
+        free_QNMs[2 * i] + 1j * free_QNMs[2 * i + 1] for i in range(N_free)
+    ]
+
     # Construct Phi, with the four terms (per QNM) decomposed as
-    # QNM = term1 + term2 + term3 + term4, where term1 and term2 are the real components
-    # and term 3 and term 4 are the imaginary components. Specifically, these are
+    # QNM = term1 + term2 + term3 + term4, where term1 and term2
+    # are the real components
+    # and term 3 and term 4 are the imaginary components.
+    # Specifically, these are
     # (a + i * b) * exp(-i \omega t)] =
     # a Re[exp(-i \omega t)] - b * Im[exp(-i \omega t)] +
     # i * (a * Im[exp(-i \omega t)] + b * Im[exp(-i \omega t)]).
-    # We will put the real terms in the 1st part of Phi, and the imaginary terms in the 2nd part
+    # We will put the real terms in the 1st part of Phi, and the
+    # imaginary terms in the 2nd part
     Phi = np.zeros((2 * t.size, 2 * N))
     for i in range(N):
         # re
         # term 1
-        Phi[:t.size, 2 * i] = np.real(np.exp(-1j * omegas[i] * (t - t_ref)))
+        Phi[: t.size, 2 * i] = np.real(np.exp(-1j * omegas[i] * (t - t_ref)))
         # term 2
-        Phi[:t.size, 2 * i + 1] = -np.imag(np.exp(-1j * omegas[i] * (t - t_ref)))
+        Phi[: t.size, 2 * i + 1] = -np.imag(
+            np.exp(-1j * omegas[i] * (t - t_ref))
+        )
         # im
         # term 3
-        Phi[t.size:, 2 * i] = np.imag(np.exp(-1j * omegas[i] * (t - t_ref)))
+        Phi[t.size :, 2 * i] = np.imag(np.exp(-1j * omegas[i] * (t - t_ref)))
         # term 4
-        Phi[t.size:, 2 * i + 1] = np.real(np.exp(-1j * omegas[i] * (t - t_ref)))
+        Phi[t.size :, 2 * i + 1] = np.real(
+            np.exp(-1j * omegas[i] * (t - t_ref))
+        )
 
     # We have 4*N terms per Phi entry (4 terms (see above))
-    # and 2*N_free parameters, since each frequency has a real and imaginary part.
+    # and 2*N_free parameters, since each frequency has a real and
+    # imaginary part.
     # So there Phi must be of length (4*N)*(2*N_free).
-    # We'll order the nonlinear parameter dependence in the trivial way, i.e., 0, 1, 2, ...
+    # We'll order the nonlinear parameter dependence in the trivial
+    # way, i.e., 0, 1, 2, ...
     # but with the fixed QNMs first.
     Ind = np.array(
         [
@@ -76,8 +96,9 @@ def fit_ringdown_waveform(t, fixed_QNMs, free_QNMs, t_ref=0):
             (2 * N) * list(np.arange(2 * N_free)),
         ]
     )
-    
-    # Construct dPhi, where each of the 4 terms (per QNM), if the QNM is free, has two components.
+
+    # Construct dPhi, where each of the 4 terms (per QNM),
+    # if the QNM is free, has two components.
     dPhi = np.zeros((2 * t.size, (2 * N) * (2 * N_free)))
     # Loop over freqs
     for freq in range(N):
@@ -88,57 +109,77 @@ def fit_ringdown_waveform(t, fixed_QNMs, free_QNMs, t_ref=0):
             # Loop over the number of freq_derivs we have to take
             # which is just the number of free QNMs
             for freq_deriv in range(N_free):
-                # shift to current QNM, shift to current term, shift to current frequency
-                idx = (2 * N_free) * (2 * freq) + (2 * N_free) * term + 2 * freq_deriv
+                # shift to current QNM, shift to current term,
+                # shift to current frequency
+                idx = (
+                    (2 * N_free) * (2 * freq)
+                    + (2 * N_free) * term
+                    + 2 * freq_deriv
+                )
 
-                # First, set the dPhi terms to zero when they correspond to a QNM w/ fixed frequency
+                # First, set the dPhi terms to zero when they correspond
+                # to a QNM w/ fixed frequency
                 if freq - N_fixed != freq_deriv:
                     # term1/term2
                     # deriv w.r.t real part of freq
-                    dPhi[:t.size, idx] = 0
+                    dPhi[: t.size, idx] = 0
                     # deriv w.r.t imag part of freq
-                    dPhi[:t.size, idx + 1] = 0
+                    dPhi[: t.size, idx + 1] = 0
                     # term3/term4
                     # deriv w.r.t real part of freq
-                    dPhi[t.size:, idx] = 0
+                    dPhi[t.size :, idx] = 0
                     # deriv w.r.t imag part of freq
-                    dPhi[t.size:, idx + 1] = 0
+                    dPhi[t.size :, idx + 1] = 0
                 else:
                     if term == 0:
                         # term 1
                         # deriv w.r.t real part of freq
-                        dPhi[:t.size, idx] = np.real(-1j * t * np.exp(-1j * omegas[freq] * (t - t_ref)))
-                        # deriv w.r.t imag part of freq
-                        dPhi[:t.size, idx + 1] = np.real(
-                            -1j * 1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
-                        )
-                        # term 3
-                        # deriv w.r.t real part of freq
-                        dPhi[t.size:, idx] = np.imag(
+                        dPhi[: t.size, idx] = np.real(
                             -1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
                         )
                         # deriv w.r.t imag part of freq
-                        dPhi[t.size:, idx + 1] = np.imag(
-                            -1j * 1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
+                        dPhi[: t.size, idx + 1] = np.real(
+                            -1j
+                            * 1j
+                            * t
+                            * np.exp(-1j * omegas[freq] * (t - t_ref))
+                        )
+                        # term 3
+                        # deriv w.r.t real part of freq
+                        dPhi[t.size :, idx] = np.imag(
+                            -1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
+                        )
+                        # deriv w.r.t imag part of freq
+                        dPhi[t.size :, idx + 1] = np.imag(
+                            -1j
+                            * 1j
+                            * t
+                            * np.exp(-1j * omegas[freq] * (t - t_ref))
                         )
                     else:
                         # term 2
                         # deriv w.r.t real part of freq
-                        dPhi[:t.size, idx] = -np.imag(
+                        dPhi[: t.size, idx] = -np.imag(
                             -1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
                         )
                         # deriv w.r.t imag part of freq
-                        dPhi[:t.size, idx + 1] = -np.imag(
-                            -1j * 1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
+                        dPhi[: t.size, idx + 1] = -np.imag(
+                            -1j
+                            * 1j
+                            * t
+                            * np.exp(-1j * omegas[freq] * (t - t_ref))
                         )
                         # term 4
                         # deriv w.r.t real part of freq
-                        dPhi[t.size:, idx] = np.real(
+                        dPhi[t.size :, idx] = np.real(
                             -1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
                         )
                         # deriv w.r.t imag part of freq
-                        dPhi[t.size:, idx + 1] = np.real(
-                            -1j * 1j * t * np.exp(-1j * omegas[freq] * (t - t_ref))
+                        dPhi[t.size :, idx + 1] = np.real(
+                            -1j
+                            * 1j
+                            * t
+                            * np.exp(-1j * omegas[freq] * (t - t_ref))
                         )
 
     return Phi, dPhi, Ind
@@ -194,7 +235,7 @@ for i in range(N):
         -1j * (QNMs[2 * i] + 1j * QNMs[2 * i + 1]) * t
     )
 
-w = np.ones(2*t.size)
+w = np.ones(2 * t.size)
 
 res, c, wresid, wresid_norm, y_est, CorMx, std_dev_params = varpro(
     t,
@@ -225,14 +266,20 @@ print(
 print("-------------------\n")
 
 compare_to_curve_fit = True
-if not linear_param_success or not nonlinear_param_success or compare_to_curve_fit:
+if (
+    not linear_param_success
+    or not nonlinear_param_success
+    or compare_to_curve_fit
+):
     if compare_to_curve_fit:
         print(
-            "Executing scipy.optimize.curve_fit to see if it matches with varpro...\n"
+            "Executing scipy.optimize.curve_fit to see if it matches "
+            "with varpro...\n"
         )
     else:
         print(
-            "Executing scipy.optimize.least_squares to see if failure is 'expected'...\n"
+            "Executing scipy.optimize.least_squares to see if failure "
+            "is 'expected'...\n"
         )
 
     lower_bounds = []
@@ -265,29 +312,33 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
         for i in range(N):
             # Amplitude initial guesses
             if i < N_fixed:
-                scipy_initial_guess.append(c[2*i])
-                scipy_initial_guess.append(c[2*i + 1])
+                scipy_initial_guess.append(c[2 * i])
+                scipy_initial_guess.append(c[2 * i + 1])
             else:
                 idx = 2 * N_fixed + 4 * (i - N_fixed)
-                scipy_initial_guess.append(c[2*i])
-                scipy_initial_guess.append(c[2*i + 1])
-                scipy_initial_guess.append(res[2*(i - N_fixed)])
-                scipy_initial_guess.append(res[2*(i - N_fixed) + 1])
+                scipy_initial_guess.append(c[2 * i])
+                scipy_initial_guess.append(c[2 * i + 1])
+                scipy_initial_guess.append(res[2 * (i - N_fixed)])
+                scipy_initial_guess.append(res[2 * (i - N_fixed) + 1])
 
     inst = fitClass()
     inst.fixed_QNMs = fixed_QNMs
-    
+
     popt, pcov = curve_fit(
-        lambda t,
-        *scipy_initial_guess: inst.fit_function(t, scipy_initial_guess),
-        t, np.concatenate((data.real, data.imag)),
+        lambda t, *scipy_initial_guess: inst.fit_function(
+            t, scipy_initial_guess
+        ),
+        t,
+        np.concatenate((data.real, data.imag)),
         scipy_initial_guess,
         bounds=(lower_bounds, upper_bounds),
-        maxfev=1
+        maxfev=1,
     )
 
-    error = np.linalg.norm(np.concatenate((data.real, data.imag)) - inst.fit_function(t, popt))
-    
+    error = np.linalg.norm(
+        np.concatenate((data.real, data.imag)) - inst.fit_function(t, popt)
+    )
+
     pcov_errors = np.sqrt(np.diag(pcov))
 
     scipy_linear_results = []
@@ -311,25 +362,31 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
             "; varpro error: ",
             wresid_norm,
             "; curve fit error: ",
-            error
+            error,
         )
         print(
             "Linear parameters match: ",
             np.allclose(np.sort(scipy_linear_results), np.sort(c)),
             "; error: ",
-            np.linalg.norm(np.sort(np.array(scipy_linear_results)) - np.sort(c))
+            np.linalg.norm(
+                np.sort(np.array(scipy_linear_results)) - np.sort(c)
+            ),
         )
         print(
             "Noninear parameters match: ",
             np.allclose(np.sort(scipy_nonlinear_results), np.sort(res)),
             "; error: ",
-            np.linalg.norm(np.sort(np.array(scipy_nonlinear_results)) - np.sort(res))
+            np.linalg.norm(
+                np.sort(np.array(scipy_nonlinear_results)) - np.sort(res)
+            ),
         )
         print(
             "Errors match: ",
             np.allclose(np.sort(pcov_errors), np.sort(std_dev_params)),
             "; error: ",
-            np.linalg.norm(np.sort(np.array(pcov_errors)) - np.sort(std_dev_params))
+            np.linalg.norm(
+                np.sort(np.array(pcov_errors)) - np.sort(std_dev_params)
+            ),
         )
         print("-------------------")
 
@@ -339,7 +396,7 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
     scipy_nonlinear_param_success = np.allclose(
         np.sort(free_QNMs), np.sort(scipy_nonlinear_results)
     )
-    
+
     if not compare_to_curve_fit:
         print("-------------------")
         print(
@@ -347,7 +404,8 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
             scipy_linear_param_success,
             "; error: ",
             np.linalg.norm(
-                np.array(np.sort(Amplitudes)) - np.array(np.sort(scipy_linear_results))
+                np.array(np.sort(Amplitudes))
+                - np.array(np.sort(scipy_linear_results))
             ),
         )
         print(
@@ -355,7 +413,8 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
             scipy_nonlinear_param_success,
             "; error: ",
             np.linalg.norm(
-                np.array(np.sort(free_QNMs)) - np.array(np.sort(scipy_nonlinear_results))
+                np.array(np.sort(free_QNMs))
+                - np.array(np.sort(scipy_nonlinear_results))
             ),
         )
         print("-------------------")
@@ -364,7 +423,8 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
             scipy_linear_param_success,
             "; error: ",
             np.linalg.norm(
-                np.array(np.sort(Amplitudes)) - np.array(np.sort(scipy_linear_results))
+                np.array(np.sort(Amplitudes))
+                - np.array(np.sort(scipy_linear_results))
             ),
         )
         print(
@@ -372,7 +432,8 @@ if not linear_param_success or not nonlinear_param_success or compare_to_curve_f
             scipy_nonlinear_param_success,
             "; error: ",
             np.linalg.norm(
-                np.array(np.sort(free_QNMs)) - np.array(np.sort(scipy_nonlinear_results))
+                np.array(np.sort(free_QNMs))
+                - np.array(np.sort(scipy_nonlinear_results))
             ),
         )
         print("-------------------")
