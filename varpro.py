@@ -4,7 +4,7 @@ from scipy.optimize import least_squares
 from scipy import linalg
 
 def varpro(t, y, w, alpha, n, ada,
-      bounds = None, **kwargs):
+           bounds = None, max_nfev = None, verbose = True, **kwargs):
 #Solve a separable nonlinear least squares problem.
 # This is a slightly simplified Python translation of the Matlab code by
 # Dianne P. O'Leary and Bert W. Rust. The original code is documented in
@@ -182,9 +182,12 @@ Nonlinear parameters:
     m1 = len(w)
     m2 = len(t)
 
-    if (m1 != m or m2 != m or m2 != m1):
-        raise Exception('t, y, and w must be vectors of the same length')
+    if (m1 != m):
+        raise Exception('y and w must be vectors of the same length')
     
+    if not (m == m2 or m == 2*m2):
+        raise Exception('y and w must be the same or twice the length of t in the case where the data is complex, since in this case it should be organized as (data.real, data.imag)') 
+        
     if (len(alpha.shape) > 1):
         raise Exception('alpha must be a 1d vector containing initial guesses for nonlinear parameters')
     q = len(alpha)
@@ -200,9 +203,10 @@ Nonlinear parameters:
     #rely on scipy least_squares for further checking of bounds
     else:
         bounds=(-np.inf, np.inf)  #default for scipy least_squares
-    
-    print('\n-------------------')
-    print('VARPRO is beginning.')
+
+    if verbose:
+        print('\n-------------------')
+        print('VARPRO is beginning.')
     
 
     W = spdiags(w,0,m,m)   #convert w from 1-d to 2-d array
@@ -246,10 +250,11 @@ Nonlinear parameters:
         
         s = s[np.arange(myrank)]
         if (myrank < n):
-            print('Warning from VARPRO:')
-            print('   The linear parameters are currently not well-determined.')
-            print('   The rank of the matrix in the subproblem is ',myrank)
-            print('   which is less than the no. of linear parameters,',n)
+            if verbose:
+                print('Warning from VARPRO:')
+                print('   The linear parameters are currently not well-determined.')
+                print('   The rank of the matrix in the subproblem is ',myrank)
+                print('   which is less than the no. of linear parameters,',n)
         
         yuse = y
         if (n < n1):
@@ -322,18 +327,19 @@ Nonlinear parameters:
 
     fj = Func_jacobian(alpha)
     result = least_squares(lambda z:fj.fun(z),alpha,lambda z: fj.jac(z),
-        bounds, **kwargs)
+                           bounds, max_nfev=max_nfev, **kwargs)
     Phi,dPhi,Ind = ada(result.x)
     Jacobian,c,wresid,y_est,myrank=formJacobian(result.x,Phi,dPhi)
     if result.status == 0: #maximum number of nonlinear fit iterations was exceeded
         raise MaxIterationError(c, result.x)
     if myrank < n: #linear parameters are ill-determined
         raise RankError(myrank, n, c, result.x)
-    print("residual_norm",result.cost)
-    print("gradient norm",result.optimality)
-    print("nfev = ",result.nfev)
-    print("njev = ",result.njev)
-    print("status = ",result.message)
+    if verbose:
+        print("residual_norm",result.cost)
+        print("gradient norm",result.optimality)
+        print("nfev = ",result.nfev)
+        print("njev = ",result.njev)
+        print("status = ",result.message)
 
     wresid_norm = np.linalg.norm(wresid)
     
@@ -359,14 +365,15 @@ Nonlinear parameters:
     D = spdiags(d,0,n + q,n + q)
     CorMx = D * CovMatrix * D
     std_dev_params = np.sqrt(np.diag(CovMatrix))
-    
-    print('VARPRO Results:')
-    print("linear parameters ", c)
-    print("nonlinear parameters ",result.x)
-    print('std_dev_params = ',std_dev_params)
-    print("wresid_norm = ",wresid_norm)
-    print('Corr. Matrix =\n',CorMx)
-    print('VARPRO is finished.')
-    print('-------------------\n')
+
+    if verbose:
+        print('VARPRO Results:')
+        print("linear parameters ", c)
+        print("nonlinear parameters ",result.x)
+        print('std_dev_params = ',std_dev_params)
+        print("wresid_norm = ",wresid_norm)
+        print('Corr. Matrix =\n',CorMx)
+        print('VARPRO is finished.')
+        print('-------------------\n')
 
     return result.x,c,wresid,wresid_norm,y_est,CorMx,std_dev_params   # end of varpro
