@@ -204,7 +204,6 @@ res, c, wresid, wresid_norm, y_est, CorMx, std_dev_params = varpro(
     2 * N,
     lambda alpha: fit_ringdown_waveform(t, fixed_QNMs, alpha),
     bounds=([-np.inf, -np.inf] * N_free, [np.inf, 0] * N_free),
-    verbose=False
 )
 
 linear_param_success = np.allclose(np.sort(Amplitudes), np.sort(c))
