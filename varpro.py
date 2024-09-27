@@ -210,7 +210,6 @@ Nonlinear parameters:
         print('\n-------------------')
         print('VARPRO is beginning.')
 
-
     W = spdiags(w,0,m,m)   #convert w from 1-d to 2-d array
 
     Phi,dPhi,Ind = ada(alpha)
@@ -231,9 +230,10 @@ Nonlinear parameters:
         raise Exception('In user function ada: dPhi and Ind must have the same number of columns.')
 
     def formJacobian(alpha, Phi, dPhi):
-        U,S,V = np.linalg.svd(W * Phi)
+        # indexing matches number of terms with linear coefficients
+        U,S,V = np.linalg.svd(W * Phi[:,:n])
         if (n >= 1):
-            s = S                #S is a vector in Python, not a matrix
+            s = S              #S is a vector in Python, not a matrix
         else:                    #no linear parameters
             if len(Ind)==0:
                 Jacobian = []
@@ -250,7 +250,7 @@ Nonlinear parameters:
         tol = m * np.finfo(float).eps
         myrank = sum(s > tol * s[0])
 
-        s = s[np.arange(myrank)]
+        s = s[0:myrank]
         if (myrank < n):
             if verbose:
                 print('Warning from VARPRO:')
@@ -260,14 +260,16 @@ Nonlinear parameters:
 
         yuse = y
         if (n < n1):
-            yuse = y - Phi[:,n1]
-        temp = np.ndarray.flatten(np.transpose(U[:,np.arange(myrank)])
-            .dot(W.dot(yuse)))
-        c = (temp / s).dot(V[np.arange(myrank)])
-        y_est = Phi[:,np.arange(n)].dot(c)
+            # indexing matches number of terms with linear coefficients
+            yuse = y - Phi[:,-1]
+
+        temp = np.ndarray.flatten(np.transpose(U[:,0:myrank]).dot(W.dot(yuse)))
+        c = (temp / s).dot(V[0:myrank])
+        y_est = Phi[:,0:n].dot(c)
         wresid = W * (yuse - y_est)
         if (n < n1):
-            y_est = y_est + Phi[:,n1]
+            # indexing matches number of terms with linear coefficients
+            y_est = y_est + Phi[:,-1]
 
         if len(dPhi)==0:
             Jacobian = []
@@ -275,22 +277,21 @@ Nonlinear parameters:
         WdPhi = W * dPhi
         WdPhi_r = wresid.dot(WdPhi)
         T2 = np.zeros((n1,q))
-        ctemp = c
-        if (n1 > n):     #not checked that this is correct!
-            ctemp = np.array([ctemp],[1])
+        if (n1 > n):     # UPDATED: should be correct
+            c = np.concatenate((np.array(c), np.array([1]))) # fixed concatenation here
 
         Jac1 = np.zeros((m,q))
         for j in np.arange(q):
             range = np.where(Ind[1,:] == j)[0]
             indrows = Ind[0,range]
-            Jac1[:,j] = WdPhi[:,range].dot(ctemp[indrows])
+            Jac1[:,j] = WdPhi[:,range].dot(c[indrows])
             T2[indrows,j] = WdPhi_r[range]
 
-        Jac1 = U[:,np.arange(myrank,m)].dot(
-            np.transpose(U[:,np.arange(myrank,m)]).dot(Jac1))
-        T2 = np.diag(1 / s[np.arange(myrank)]).dot(V[np.arange(myrank)]
-            .dot(T2[np.arange(n),:]))
-        Jac2 = U[:,np.arange(myrank)].dot(T2)
+        Jac1 = U[:,myrank:m].dot(
+            np.transpose(U[:,myrank:m]).dot(Jac1))
+        T2 = np.diag(1 / s[0:myrank]).dot(V[0:myrank]
+            .dot(T2[0:n,:]))
+        Jac2 = U[:,0:myrank].dot(T2)
         Jacobian = - (Jac1 + Jac2)
 
         return Jacobian,c,wresid,y_est,myrank  # end of formJacobian
@@ -358,6 +359,12 @@ Nonlinear parameters:
             J[:,i] = J[:,i] + c[j] * dPhi[:,kk]
     Mat = W.dot(np.concatenate((Phi[:,np.arange(n)],J),axis=1))
     Qj,Rj,Pj = linalg.qr(Mat, mode='economic', pivoting=True)
+
+    # Updated Rj matrix to have a 1 on the diagonal in the final entry corresponding to the final term
+    # in the model with no linear coefficient (dimension disagreement error for n != n1)
+    if n < n1:
+        np.fill_diagonal(Rj, 1)
+
     T2 = linalg.solve_triangular(Rj,(np.identity(Rj.shape[0])))
     sigma2 = wresid_norm*wresid_norm/(m-n-q)
     CovMx = sigma2 * T2.dot(np.transpose(T2))
