@@ -16,13 +16,13 @@ def varpro(t, y, w, alpha, n, ada,
 # Given a set of m observations y(0),...,y(m-1) at "times" t(0),...,t(m-1),
 # this program computes a weighted least squares fit using the model
 #
-#    eta(alpha,c,t) = 
-#            c_0 * phi_0 (alpha,t) + ...  + c_(n-1) * phi_(n-1) (alpha,t) 
+#    eta(alpha,c,t) =
+#            c_0 * phi_0 (alpha,t) + ...  + c_(n-1) * phi_(n-1) (alpha,t)
 # (possibly with an extra term  + phi_n (alpha,t) ).
 #
 # This program determines optimal values of the q nonlinear parameters
 # alpha and the n linear parameters c, given observations y at m
-# different values of the "time" t and given evaluation of phi and 
+# different values of the "time" t and given evaluation of phi and
 # derivatives of phi.
 #
 # On Input:
@@ -36,7 +36,7 @@ def varpro(t, y, w, alpha, n, ada,
 #                r(i) = w(i) * (y(i) - eta(alpha, c, t(i))).
 #
 #                Therefore, w(i) should be set to 1 divided by
-#                the standard deviation in the measurement y(i).  
+#                the standard deviation in the measurement y(i).
 #                If this number is unknown, set w(i) = 1.
 #   alpha 1-d array of length q with initial estimates of the parameters alpha.
 #   n            number of linear parameters c
@@ -78,13 +78,13 @@ def varpro(t, y, w, alpha, n, ada,
 #                **************************************************
 #
 #  CorMx:  (n+q) x (n+q)
-#                This is the estimated correlation matrix for the 
+#                This is the estimated correlation matrix for the
 #                parameters.  The linear parameters c are ordered
 #                first, followed by the nonlinear parameters alpha.
 #  std_dev_param: length n+q
-#                This vector contains the estimate of the standard 
+#                This vector contains the estimate of the standard
 #                deviation for each parameter.
-#                The k-th element is the square root of the k-th main 
+#                The k-th element is the square root of the k-th main
 #                diagonal element of the covariance matrix CovMatrix
 #
 #---------------------------------------------------------------
@@ -95,7 +95,7 @@ def varpro(t, y, w, alpha, n, ada,
 #
 #     This function computes Phi and dPhi.
 #
-#     On Input: 
+#     On Input:
 #
 #     alpha    length q  contains the current value of the alpha parameters.
 #
@@ -107,22 +107,22 @@ def varpro(t, y, w, alpha, n, ada,
 #     On Output:
 #
 #     Phi      m x n1   where Phi(i,j) = phi_j(alpha,t_i).
-#                       (n1 = n if there is no extra term; 
+#                       (n1 = n if there is no extra term;
 #                        n1 = n+1 if an extra term is used for a nonlinear
 #                        term with no linear coefficient)
 #     dPhi     m x p    where the columns contain partial derivative
-#                       information for Phi and p is the number of 
-#                       columns in Ind 
+#                       information for Phi and p is the number of
+#                       columns in Ind
 #                       Use numerical differentiation if analytical derivatives
 #                       not available
 #     Ind      2 x p    Column k of dPhi contains the partial
-#                       derivative of Phi_j with respect to alpha_i, 
-#                       evaluated at the current value of alpha, 
+#                       derivative of Phi_j with respect to alpha_i,
+#                       evaluated at the current value of alpha,
 #                       where j = Ind(0,k) and i = Ind(1,k).
 #                       Columns of dPhi that are always zero, independent
-#                       of alpha, need not be stored. 
-#     Example:     If  phi_0 is a function of alpha_1 and alpha_2, 
-#                  and phi_1 is a function of alpha_0 and alpha_1, then 
+#                       of alpha, need not be stored.
+#     Example:     If  phi_0 is a function of alpha_1 and alpha_2,
+#                  and phi_1 is a function of alpha_0 and alpha_1, then
 #                  we can set
 #                          Ind = [ 0 0 1 1
 #                                  1 2 0 1 ]
@@ -145,7 +145,7 @@ def varpro(t, y, w, alpha, n, ada,
 #
 #  Any linear parameters that require upper or lower bounds should be put in
 #  alpha, not c, and treated non-linearly. (This should rarely be needed.)
-#  
+#
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     class RankError(Exception):
         '''Raised when linear parameters are ill-determined.'''
@@ -160,7 +160,8 @@ Linear parameters:
     %s
 Nonlinear parameters:
     %s""" \
-                        % (rank, num_c, " ".join(map(str, linear_params)), " ".join(map(str, nonlin_params)))
+        % (rank, num_c, " ".join(map(str, linear_params)),
+           " ".join(map(str, nonlin_params)))
             super().__init__(message)
 
     class MaxIterationError(Exception):
@@ -175,7 +176,8 @@ Linear parameters:
     %s
 Nonlinear parameters:
     %s""" \
-                        % (" ".join(map(str, linear_params)), " ".join(map(str, nonlin_params)))
+        % (" ".join(map(str, linear_params)),
+           " ".join(map(str, nonlin_params)))
             super().__init__(message)
 
     m = len(y)
@@ -184,10 +186,10 @@ Nonlinear parameters:
 
     if (m1 != m):
         raise Exception('y and w must be vectors of the same length')
-    
+
     if not (m == m2 or m == 2*m2):
-        raise Exception('y and w must be the same or twice the length of t in the case where the data is complex, since in this case it should be organized as (data.real, data.imag)') 
-        
+        raise Exception('y and w must be the same or twice the length of t in the case where the data is complex, since in this case it should be organized as (data.real, data.imag)')
+
     if (len(alpha.shape) > 1):
         raise Exception('alpha must be a 1d vector containing initial guesses for nonlinear parameters')
     q = len(alpha)
@@ -207,27 +209,27 @@ Nonlinear parameters:
     if verbose:
         print('\n-------------------')
         print('VARPRO is beginning.')
-    
+
 
     W = spdiags(w,0,m,m)   #convert w from 1-d to 2-d array
-    
+
     Phi,dPhi,Ind = ada(alpha)
     m1,n1 = Phi.shape
-    
+
     m2,n2 = dPhi.shape
     ell,n3 = Ind.shape
     if np.logical_and((m1 != m2),(m2 > 0)):
         raise Exception('In user function ada: Phi and dPhi must have the same number of rows.')
-    
+
     if np.logical_or((n1 < n),(n1 > n + 1)):
         raise Exception('In user function ada: The number of columns in Phi must be n or n+1.')
-    
+
     if np.logical_and((n2 > 0),(ell != 2)):
         raise Exception('In user function ada: Ind must have two rows.')
-    
+
     if np.logical_and((n2 > 0),(n2 != n3)):
         raise Exception('In user function ada: dPhi and Ind must have the same number of columns.')
-    
+
     def formJacobian(alpha, Phi, dPhi):
         U,S,V = np.linalg.svd(W * Phi)
         if (n >= 1):
@@ -243,11 +245,11 @@ Nonlinear parameters:
             wresid = W * (y - y_est)
             myrank = 1
             return Jacobian,c,wresid,y_est,myrank
-    
+
         #tol = m * sys.float_info.epsilon
         tol = m * np.finfo(float).eps
         myrank = sum(s > tol * s[0])
-        
+
         s = s[np.arange(myrank)]
         if (myrank < n):
             if verbose:
@@ -255,7 +257,7 @@ Nonlinear parameters:
                 print('   The linear parameters are currently not well-determined.')
                 print('   The rank of the matrix in the subproblem is ',myrank)
                 print('   which is less than the no. of linear parameters,',n)
-        
+
         yuse = y
         if (n < n1):
             yuse = y - Phi[:,n1]
@@ -266,7 +268,7 @@ Nonlinear parameters:
         wresid = W * (yuse - y_est)
         if (n < n1):
             y_est = y_est + Phi[:,n1]
-        
+
         if len(dPhi)==0:
             Jacobian = []
             return Jacobian,c,wresid,y_est,myrank
@@ -276,7 +278,7 @@ Nonlinear parameters:
         ctemp = c
         if (n1 > n):     #not checked that this is correct!
             ctemp = np.array([ctemp],[1])
-        
+
         Jac1 = np.zeros((m,q))
         for j in np.arange(q):
             range = np.where(Ind[1,:] == j)[0]
@@ -290,7 +292,7 @@ Nonlinear parameters:
             .dot(T2[np.arange(n),:]))
         Jac2 = U[:,np.arange(myrank)].dot(T2)
         Jacobian = - (Jac1 + Jac2)
-        
+
         return Jacobian,c,wresid,y_est,myrank  # end of formJacobian
 
     def f_lsq(alpha_trial):
@@ -330,9 +332,11 @@ Nonlinear parameters:
                            bounds, max_nfev=max_nfev, **kwargs)
     Phi,dPhi,Ind = ada(result.x)
     Jacobian,c,wresid,y_est,myrank=formJacobian(result.x,Phi,dPhi)
-    if result.status == 0: #maximum number of nonlinear fit iterations was exceeded
+    if result.status == 0:
+        #maximum number of nonlinear fit iterations was exceeded
         raise MaxIterationError(c, result.x)
-    if myrank < n: #linear parameters are ill-determined
+    if myrank < n:
+        #linear parameters are ill-determined
         raise RankError(myrank, n, c, result.x)
     if verbose:
         print("residual_norm",result.cost)
@@ -342,7 +346,7 @@ Nonlinear parameters:
         print("status = ",result.message)
 
     wresid_norm = np.linalg.norm(wresid)
-    
+
     xx,pp = dPhi.shape
     J = np.zeros((m,q))
     for kk in np.arange(pp):
