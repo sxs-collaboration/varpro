@@ -251,8 +251,6 @@ def varpro(t, y, w, alpha, n, ada,
         myrank = sum(s > tol * s[0])
 
         s = s[0:myrank]
-        if (myrank < n):
-            raise RankError(myrank,n,np.zeros(n),np.zeros(q))
         yuse = y
         if (n < n1):
             # indexing matches number of terms with linear coefficients
@@ -260,6 +258,12 @@ def varpro(t, y, w, alpha, n, ada,
 
         temp = np.ndarray.flatten(np.transpose(U[:,0:myrank]).dot(W.dot(yuse)))
         c = (temp / s).dot(V[0:myrank])
+
+        # Put the RankError after 'c' is computed so that we can get
+        # some diagnostics.
+        if (myrank < n):
+            raise RankError(myrank,n,c,alpha)
+
         y_est = Phi[:,0:n].dot(c)
         wresid = W * (yuse - y_est)
         if (n < n1):
