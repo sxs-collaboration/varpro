@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "varpro"
+version = "0.1.0"
+description = "Variable projection algorithm for separable nonlinear least squares problems"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "Simulating eXtreme Spacetimes Collaboration"}
+]
+license = {file = "LICENSE"}
+dependencies = [
+    "numpy",
+    "scipy"
+]
+
+[tool.setuptools]
+py-modules = ["varpro"]
